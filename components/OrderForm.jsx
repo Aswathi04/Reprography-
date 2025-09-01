@@ -85,25 +85,42 @@ const newValue = name === 'quantity' ? (parseInt(value, 10) || 1) : value;
         return;
     }
     
-    // 1. Set loading state and message
     setIsUploading(true);
     setStatusMessage('Submitting your order...');
 
-    // NOTE: In our next major step, we will add the real backend logic here.
-    // For now, we will simulate a successful submission to test the UI.
-    setTimeout(() => {
-        // 2. On success, update the message and reset the form
-        setIsUploading(false);
-        setStatusMessage('Order submitted successfully! You will be notified when it is ready.');
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('options', JSON.stringify(options));
+    formData.append('totalCost', totalCost);
+    formData.append('fileName', file.name);
+
+    try {
+        const response = await fetch('/api/create-order', {
+            method: 'POST',
+            body: formData,
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+            throw new Error(result.error || 'Something went wrong.');
+        }
+
+        setStatusMessage(`Order submitted successfully! Order ID: ${result.orderId}`);
         
-        // Reset the form for the next order
+        // Reset the form
         setFile(null);
         setPreview('');
         setOptions({ quantity: 1, paperSize: 'A4', color: 'bw' });
 
-        // Optional: clear the success message after a few seconds
         setTimeout(() => setStatusMessage('Please select a file to begin.'), 5000);
-    }, 2000); // Simulate a 2-second upload time
+
+    } catch (error) {
+        setStatusMessage(`Error: ${error.message}`);
+        console.error('Submission Error:', error);
+    } finally {
+        setIsUploading(false);
+    }
 };
 
     return (
