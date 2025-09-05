@@ -11,7 +11,6 @@ const costs = {
 };
 
 export default function OrderForm() {
-    // --- MODIFIED STATE: Use an array for files ---
     const [files, setFiles] = useState([]); 
     const [options, setOptions] = useState({
         quantity: 1,
@@ -22,7 +21,6 @@ export default function OrderForm() {
     const [isUploading, setIsUploading] = useState(false);
     const [statusMessage, setStatusMessage] = useState('Please select one or more files to begin.');
 
-    // --- MODIFIED COST CALCULATION: Cost is per file ---
     useEffect(() => {
         if (files.length === 0) {
             setTotalCost(0);
@@ -33,7 +31,6 @@ export default function OrderForm() {
         setTotalCost(total);
     }, [files, options]);
 
-    // --- MODIFIED FILE HANDLER: Process multiple files ---
     const handleFileChange = async (e) => {
         const selectedFiles = Array.from(e.target.files);
         if (selectedFiles.length === 0) return;
@@ -48,7 +45,7 @@ export default function OrderForm() {
                         return await imageCompression(file, compressionOptions);
                     } catch (error) {
                         console.error("Compression error:", error);
-                        return file; // Fallback to original file
+                        return file;
                     }
                 }
                 return file;
@@ -65,7 +62,6 @@ export default function OrderForm() {
         setOptions(prev => ({ ...prev, [name]: newValue }));
     };
 
-    // --- MODIFIED SUBMIT HANDLER: Send multiple files ---
     const handleSubmit = async (e) => {
         e.preventDefault();
         if (files.length === 0) {
@@ -78,7 +74,6 @@ export default function OrderForm() {
 
         const formData = new FormData();
         files.forEach((file) => {
-            // Append each file with the same key name, using `[]` to denote an array
             formData.append('files', file); 
         });
         formData.append('options', JSON.stringify(options));
@@ -91,3 +86,80 @@ export default function OrderForm() {
             if (!response.ok) {
                 throw new Error(result.error || 'Something went wrong.');
             }
+
+            setStatusMessage(`${result.successfulOrders} order(s) submitted successfully!`);
+            
+            setFiles([]);
+            setOptions({ quantity: 1, paperSize: 'A4', color: 'bw' });
+
+            setTimeout(() => setStatusMessage('Please select one or more files to begin.'), 5000);
+
+        } catch (error) {
+            setStatusMessage(`Error: ${error.message}`);
+            console.error('Submission Error:', error);
+        } finally {
+            setIsUploading(false);
+        }
+    };
+
+    return (
+        <form onSubmit={handleSubmit} className="space-y-8 bg-white p-6 sm:p-8 rounded-lg shadow-md border border-gray-200">
+            <div>
+                <label htmlFor="file-upload" className="block text-lg font-semibold text-gray-800">1. Upload Your Document(s)</label>
+                <input id="file-upload" name="file-upload" type="file" onChange={handleFileChange} required multiple className="mt-2 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-violet-50 file:text-violet-700 hover:file:bg-violet-100 cursor-pointer" />
+                
+                {files.length > 0 && (
+                    <div className="mt-4 p-3 bg-gray-50 border rounded-md">
+                        <h3 className="font-semibold text-sm text-gray-700">Selected Files:</h3>
+                        <ul className="mt-2 list-disc list-inside text-sm text-gray-600">
+                            {files.map(file => <li key={file.name}>{file.name}</li>)}
+                        </ul>
+                    </div>
+                )}
+            </div>
+            
+            <hr />
+
+            <div>
+                 <label className="block text-lg font-semibold text-gray-800">2. Choose Your Options (for all files)</label>
+                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-4">
+                    <div>
+                        <label htmlFor="quantity" className="block text-sm font-medium text-gray-700">Quantity</label>
+                        <input type="number" name="quantity" id="quantity" value={options.quantity} onChange={handleOptionChange} min="1" className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" />
+                    </div>
+                    <div>
+                        <label htmlFor="paperSize" className="block text-sm font-medium text-gray-700">Paper Size</label>
+                        <select id="paperSize" name="paperSize" value={options.paperSize} onChange={handleOptionChange} className="mt-1 block w-full rounded-md border--gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
+                            <option>A4</option>
+                            <option>A3</option>
+                        </select>
+                    </div>
+                    <div>
+                        <p className="block text-sm font-medium text-gray-700">Color Options</p>
+                        <div className="mt-2 flex space-x-4">
+                            <label className="flex items-center"><input type="radio" name="color" value="bw" checked={options.color === 'bw'} onChange={handleOptionChange} className="focus:ring-indigo-500 h-4 w-4 text-indigo-600 border-gray-300" /> <span className="ml-2">B&W</span></label>
+                            <label className="flex items-center"><input type="radio" name="color" value="color" checked={options.color === 'color'} onChange={handleOptionChange} className="focus:ring-indigo-500 h-4 w-4 text-indigo-600 border-gray-300" /> <span className="ml-2">Color</span></label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <hr />
+
+            <div className="pt-2">
+                <div className="flex justify-between items-center">
+                    <div>
+                        <p className="text-lg font-semibold text-gray-800">3. Final Cost</p>
+                        <p className="text-sm text-gray-500">{statusMessage}</p>
+                    </div>
+                    <div className="text-right">
+                        <p className="text-3xl font-bold text-gray-900">${totalCost.toFixed(2)}</p>
+                        <button type="submit" disabled={isUploading || files.length === 0} className="mt-2 inline-flex justify-center rounded-md border border-transparent bg-indigo-600 py-2 px-6 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:bg-gray-400 disabled:cursor-not-allowed">
+                            {isUploading ? 'Processing...' : `Submit ${files.length} Order(s)`}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </form>
+    );
+}
