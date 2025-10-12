@@ -1,6 +1,7 @@
 // Filename: app/page.jsx
 
-import { UserButton, auth } from '@clerk/nextjs/server'; // Corrected import path
+import { auth } from '@clerk/nextjs/server'; // server-only auth helper
+import ClientUserButton from '@/components/ClientUserButton';
 import Link from 'next/link';
 
 export default function HomePage() {
@@ -24,7 +25,7 @@ export default function HomePage() {
                <Link href="/order" className="px-6 py-3 bg-indigo-600 text-white font-semibold rounded-lg shadow-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-colors">
                  Place a New Order
                </Link>
-               <UserButton afterSignOutUrl="/" />
+               <ClientUserButton afterSignOutUrl="/" />
             </div>
           </div>
         ) : (

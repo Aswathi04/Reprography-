@@ -6,10 +6,16 @@ import { auth } from '@clerk/nextjs/server';
 import { v4 as uuidv4 } from 'uuid';
 
 export async function POST(request) {
-  const supabaseAdmin = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL || '',
-    process.env.SUPABASE_SERVICE_ROLE_KEY || ''
-  );
+  // Prefer server-side env vars but fall back to NEXT_PUBLIC if present
+  const SUPABASE_URL = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_KEY;
+
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+    console.error('Supabase configuration missing. Ensure SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are set.');
+    return NextResponse.json({ error: 'Supabase not configured on the server.' }, { status: 500 });
+  }
+
+  const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
   try {
     const { userId } = auth();
@@ -24,15 +30,32 @@ export async function POST(request) {
     }
 
     // --- MODIFIED: Process all files in parallel ---
+
     const orderCreationPromises = files.map(async (file) => {
-      const fileName = file.name;
-      const fileExtension = fileName.split('.').pop();
+      // Determine a reliable filename: prefer file.name, then client-provided fallback, else generate one
+      const originalName = file.name || file._originalName || '';
+      const extFromName = originalName && originalName.includes('.') ? originalName.split('.').pop() : null;
+      const extFromType = file.type ? file.type.split('/').pop() : 'bin';
+      const fileExtension = extFromName || extFromType || 'bin';
+      const fileName = originalName || `upload-${Date.now()}.${fileExtension}`;
       const uniqueFileName = `${userId || 'guest'}/${uuidv4()}.${fileExtension}`;
+
+      // Convert incoming File/Blob to Buffer for Supabase Node upload
+      let uploadBody;
+      try {
+        // Web File/Blob exposes arrayBuffer()
+        const arrayBuffer = await file.arrayBuffer();
+        uploadBody = Buffer.from(arrayBuffer);
+      } catch (err) {
+        // As a fallback, try using the raw file object if supported by the client
+        console.warn('Failed to convert file to Buffer, falling back to raw file object', err);
+        uploadBody = file;
+      }
 
       // 1. Upload file
       const { error: uploadError } = await supabaseAdmin.storage
         .from('print_files')
-        .upload(uniqueFileName, file);
+        .upload(uniqueFileName, uploadBody, { contentType: file.type || 'application/octet-stream' });
 
       if (uploadError) {
         console.error('Supabase Upload Error for file:', fileName, uploadError);

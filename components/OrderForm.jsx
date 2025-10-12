@@ -42,7 +42,18 @@ export default function OrderForm() {
                 if (file.type.startsWith('image/')) {
                     try {
                         const compressionOptions = { maxSizeMB: 1, maxWidthOrHeight: 1920, useWebWorker: true };
-                        return await imageCompression(file, compressionOptions);
+                        const compressed = await imageCompression(file, compressionOptions);
+                        // imageCompression may return a Blob without a name — wrap it into a File with original filename
+                        if (typeof File !== 'undefined' && !(compressed instanceof File)) {
+                            try {
+                                return new File([compressed], file.name, { type: compressed.type || file.type });
+                            } catch (err) {
+                                // Some environments may not support File constructor; fallback to blob but keep a reference to original name
+                                compressed._originalName = file.name;
+                                return compressed;
+                            }
+                        }
+                        return compressed;
                     } catch (error) {
                         console.error("Compression error:", error);
                         return file;
@@ -73,8 +84,23 @@ export default function OrderForm() {
         setStatusMessage(`Submitting ${files.length} order(s)...`);
 
         const formData = new FormData();
-        files.forEach((file) => {
-            formData.append('files', file); 
+        files.forEach((file, idx) => {
+            // If compression returned a Blob without a name, convert to File to preserve the original name
+            let fileToAppend = file;
+            if (typeof File !== 'undefined' && !(file instanceof File)) {
+                // Try to infer an extension and name
+                const ext = file.type ? file.type.split('/').pop() : 'bin';
+                const name = files[idx] && files[idx].name ? files[idx].name : `upload-${Date.now()}.${ext}`;
+                try {
+                    fileToAppend = new File([file], name, { type: file.type || 'application/octet-stream' });
+                } catch (err) {
+                    // In environments where File constructor is unavailable, fallback to blob
+                    console.warn('File constructor unavailable, appending Blob instead', err);
+                    fileToAppend = file;
+                }
+            }
+            // Use original filename if available, otherwise the File object will carry its own name
+            formData.append('files', fileToAppend, fileToAppend.name || `upload-${idx}`);
         });
         formData.append('options', JSON.stringify(options));
         formData.append('totalCost', totalCost);
