@@ -1,76 +1,47 @@
-// Filename: app/orders/page.jsx
 import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
 import { auth } from '@clerk/nextjs/server';
 import { OrderDate } from '@/components/OrderDate';
 
-async function getOrders() {
+async function getUserOrders() {
   try {
     const { userId } = auth();
+    if (!userId) {
+      throw new Error('Not authenticated');
+    }
+
     const cookieStore = cookies();
     const supabase = createServerComponentClient({
       cookies: () => cookieStore,
     });
 
-    if (userId) {
-      // Fetch orders for authenticated users
-      const { data: orders, error } = await supabase
-        .from('orders')
-        .select('*')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false });
+    const { data: orders, error } = await supabase
+      .from('orders')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
 
-      if (error) {
-        console.error('Supabase error:', error);
-        return [];
-      }
-
-      return orders || [];
-    } else {
-      // Fetch orders for guests using session ID
-      const guestSessionId = cookieStore.get('guest_session_id')?.value;
-      if (!guestSessionId) {
-        return [];
-      }
-
-      const { data: guestOrders, error: guestError } = await supabase
-        .from('orders')
-        .select('*')
-        .eq('guest_session_id', guestSessionId)
-        .order('created_at', { ascending: false });
-
-      if (guestError) {
-        console.error('Supabase error for guest orders:', guestError);
-        return [];
-      }
-
-      return guestOrders || [];
+    if (error) {
+      console.error('Error fetching user orders:', error);
+      return [];
     }
+
+    return orders || [];
   } catch (error) {
-    console.error('Error fetching orders:', error);
+    console.error('Error fetching user orders:', error);
     return [];
   }
 }
 
-export default async function OrdersPage() {
-  const orders = await getOrders();
+export default async function UserDashboard() {
+  const orders = await getUserOrders();
 
   return (
     <main className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-8">Your Print Orders</h1>
+        <h1 className="text-3xl font-bold text-gray-900 mb-8">Your Orders</h1>
 
-        {orders === null ? (
-          <div className="bg-white p-6 rounded-lg shadow text-center">
-            <p className="text-gray-500">You are not signed in. Ready to print something?</p>
-            <a 
-              href="/order"
-              className="mt-4 inline-block px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
-            >
-              Place New Order
-            </a>
-          </div>
-        ) : orders.length === 0 ? (
+        {orders.length === 0 ? (
           <div className="bg-white p-6 rounded-lg shadow text-center">
             <p className="text-gray-500">No orders found. Ready to print something?</p>
             <a 

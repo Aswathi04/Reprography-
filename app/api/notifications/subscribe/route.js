@@ -5,6 +5,14 @@ export async function POST(request) {
     try {
         const { subscription } = await request.json();
         
+        // Log the incoming subscription for debugging
+        console.log('Incoming subscription:', subscription);
+
+        // Validate the subscription object
+        if (!subscription || typeof subscription !== 'object') {
+            return Response.json({ error: 'Invalid subscription object' }, { status: 400 });
+        }
+
         // Initialize Supabase client
         const supabase = createClient(
             process.env.NEXT_PUBLIC_SUPABASE_URL,

@@ -46,13 +46,19 @@ export function NotificationSubscriber() {
                 }
 
                 // Send subscription to backend
-                await fetch('/api/notifications/subscribe', {
+                const response = await fetch('/api/notifications/subscribe', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({ subscription }),
                 });
+
+                if (!response.ok) {
+                    const errorBody = await response.text();
+                    console.error(`Failed to subscribe: ${response.status} ${response.statusText}`, errorBody);
+                    throw new Error(`Failed to subscribe: ${response.status}`);
+                }
 
                 console.log('Push notification subscription successful');
             } catch (error) {

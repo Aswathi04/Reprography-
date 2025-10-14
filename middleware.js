@@ -8,6 +8,8 @@ const PUBLIC_ROUTES = [
   "/sign-in",
   "/sign-up",
   "/api/create-order",
+  "/orders", // Added to allow unauthenticated access
+  "/order", // Added to allow unauthenticated access
 ];
 
 export default clerkMiddleware(async (auth, req) => {

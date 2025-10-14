@@ -49,13 +49,29 @@ export default async function AdminPage() {
         return { ...order, publicURL: data.publicUrl };
     });
 
+    async function updateOrderStatus(orderId, newStatus) {
+        try {
+            const { error } = await supabaseAdmin
+                .from('orders')
+                .update({ status: newStatus })
+                .eq('id', orderId);
+
+            if (error) {
+                console.error('Error updating order status:', error);
+                throw error;
+            }
+        } catch (error) {
+            console.error('Error updating order status:', error);
+        }
+    }
+
     return (
         <main className="container mx-auto p-4 sm:p-8">
             <h1 className="text-3xl sm:text-4xl font-bold text-gray-800 mb-8">Admin Dashboard</h1>
             
             {/* --- 3. DISPLAY --- */}
             {/* Pass the fetched data to an interactive client component */}
-            <AdminDashboard initialOrders={ordersWithUrls} />
+            <AdminDashboard initialOrders={ordersWithUrls} updateOrderStatus={updateOrderStatus} />
         </main>
     );
 }
