@@ -3,6 +3,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import imageCompression from 'browser-image-compression';
 
 const costs = {
@@ -11,6 +12,7 @@ const costs = {
 };
 
 export default function OrderForm() {
+    const router = useRouter();
     const [files, setFiles] = useState([]); 
     const [options, setOptions] = useState({
         quantity: 1,
@@ -118,7 +120,8 @@ export default function OrderForm() {
             setFiles([]);
             setOptions({ quantity: 1, paperSize: 'A4', color: 'bw' });
 
-            setTimeout(() => setStatusMessage('Please select one or more files to begin.'), 5000);
+            // Navigate to orders page after successful submission
+            router.push('/orders');
 
         } catch (error) {
             setStatusMessage(`Error: ${error.message}`);

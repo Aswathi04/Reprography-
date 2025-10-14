@@ -53,13 +53,18 @@ export async function POST(request) {
       }
 
       // 1. Upload file
-      const { error: uploadError } = await supabaseAdmin.storage
+      const { data: uploadData, error: uploadError } = await supabaseAdmin.storage
         .from('print_files')
         .upload(uniqueFileName, uploadBody, { contentType: file.type || 'application/octet-stream' });
 
       if (uploadError) {
+        // Log full error for server debugging
         console.error('Supabase Upload Error for file:', fileName, uploadError);
-        throw new Error(`Could not upload the file: ${fileName}`);
+
+        // Return a detailed error to the client so it's easier to debug (but not secret keys)
+        // Include status/message when available
+        const detail = uploadError.message || JSON.stringify(uploadError);
+        return NextResponse.json({ error: `Could not upload the file: ${fileName}. ${detail}` }, { status: 502 });
       }
 
       // 2. Insert order into database

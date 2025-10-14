@@ -2,6 +2,7 @@
 
 // Import the ClerkProvider to manage authentication state for the entire app
 import { ClerkProvider } from '@clerk/nextjs'
+import { NotificationSubscriber } from '@/components/NotificationSubscriber'
 import './globals.css' // This line imports your global styles
 
 // This is standard Next.js metadata for your site (e.g., the title in the browser tab)
@@ -17,6 +18,7 @@ export default function RootLayout({ children }) {
     <ClerkProvider>
       <html lang="en">
         <body>
+          <NotificationSubscriber />
           {/* {children} is a placeholder for the actual page content being displayed */}
           {children}
         </body>
