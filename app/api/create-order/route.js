@@ -19,6 +19,20 @@ export async function POST(request) {
 
   try {
     const { userId } = auth();
+    
+    // Handle guest session ID - get from cookie or create new one
+    let guestSessionId = null;
+    if (!userId) {
+      const cookieHeader = request.headers.get('cookie') || '';
+      const cookies = cookieHeader.split(';').reduce((acc, cookie) => {
+        const [key, value] = cookie.trim().split('=');
+        acc[key] = value;
+        return acc;
+      }, {});
+      
+      guestSessionId = cookies['guest_session_id'] || uuidv4();
+    }
+    
     const formData = await request.formData();
     const options = JSON.parse(formData.get('options') || '{}');
     
@@ -70,7 +84,7 @@ export async function POST(request) {
       // 2. Insert order into database
       const orderData = {
         user_id: userId,
-        guest_session_id: !userId ? uuidv4() : null,
+        guest_session_id: !userId ? guestSessionId : null,
         file_name: fileName,
         file_path: uniqueFileName,
         options: options,
@@ -79,6 +93,8 @@ export async function POST(request) {
         status: 'pending',
       };
 
+      console.log('DEBUG - Inserting order:', orderData);
+      
       const { error: insertError } = await supabaseAdmin
         .from('orders')
         .insert([orderData]);
@@ -89,12 +105,25 @@ export async function POST(request) {
         await supabaseAdmin.storage.from('print_files').remove([uniqueFileName]);
         throw new Error(`Could not save order for file: ${fileName}`);
       }
+      
+      console.log('DEBUG - Order inserted successfully for file:', fileName);
     });
 
     // Wait for all uploads and inserts to complete
     await Promise.all(orderCreationPromises);
     
-    return NextResponse.json({ success: true, successfulOrders: files.length }, { status: 201 });
+    // Set guest session cookie if this is a guest order
+    const response = NextResponse.json({ success: true, successfulOrders: files.length }, { status: 201 });
+    if (!userId && guestSessionId) {
+      response.cookies.set('guest_session_id', guestSessionId, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 60 * 60 * 24 * 30 // 30 days
+      });
+    }
+    
+    return response;
 
   } catch (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });

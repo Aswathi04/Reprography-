@@ -4,6 +4,9 @@ import { auth } from '@clerk/nextjs/server'; // server-only auth helper
 import ClientUserButton from '@/components/ClientUserButton';
 import Link from 'next/link';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export default function HomePage() {
   const { userId } = auth();
 
@@ -31,7 +34,7 @@ export default function HomePage() {
         ) : (
           // --- CONTENT FOR LOGGED-OUT USERS ---
           <div className="flex flex-col sm:flex-row justify-center items-center space-y-4 sm:space-y-0 sm:space-x-4">
-            <Link href="/orders" className="px-6 py-3 bg-indigo-600 text-white font-semibold rounded-lg shadow-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-colors">
+            <Link href="/order" className="px-6 py-3 bg-indigo-600 text-white font-semibold rounded-lg shadow-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-colors">
               Order as a Guest
             </Link>
             <Link href="/sign-in" className="px-6 py-3 bg-gray-200 text-gray-800 font-semibold rounded-lg shadow-sm hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 transition-colors">

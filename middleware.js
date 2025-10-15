@@ -15,6 +15,11 @@ const PUBLIC_ROUTES = [
 export default clerkMiddleware(async (auth, req) => {
   const pathname = req.nextUrl ? req.nextUrl.pathname : new URL(req.url).pathname;
 
+  // Allow Clerk's catch-all routes for sign-in/sign-up and their sub-paths
+  if (pathname.startsWith('/sign-in') || pathname.startsWith('/sign-up')) {
+    return NextResponse.next();
+  }
+
   // Allow public routes without redirecting to sign-in
   if (PUBLIC_ROUTES.includes(pathname)) {
     return NextResponse.next();
@@ -28,12 +33,7 @@ export default clerkMiddleware(async (auth, req) => {
     return NextResponse.next();
   }
 
-  // Otherwise redirect to sign-in using Clerk helper if available
-  if (authObj && typeof authObj.redirectToSignIn === "function") {
-    return authObj.redirectToSignIn({ returnBackUrl: req.url });
-  }
-
-  // Fallback: redirect to local sign-in page
+  // For protected routes, redirect to sign-in
   return NextResponse.redirect(new URL("/sign-in", req.url));
 });
 
